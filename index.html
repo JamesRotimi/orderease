@@ -1,0 +1,1765 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CGI Drinks Prototype — V3</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ========== RESET & TOKENS ========== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --navy: #1B2A4A;
+  --navy-light: #2A3D66;
+  --amber: #946300;
+  --amber-light: #8C6400;
+  --purple: #7B5EA7;
+  --purple-light: #E8DFF5;
+  --green: #2E8B57;
+  --green-light: #E6F5EC;
+  --red: #C0392B;
+  --red-light: #FDEDEB;
+  --bg: #F7F5F2;
+  --white: #FFFFFF;
+  --border: #E0DDD9;
+  --text-grey: #6B6661;
+  --warm-grey: #D9D1C9;
+  --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+body {
+  font-family: var(--font);
+  background: #E8E4DF;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+/* ========== PHONE FRAME ========== */
+#phone {
+  width: 390px;
+  height: 844px;
+  background: var(--bg);
+  border-radius: 40px;
+  overflow: hidden;
+  position: relative;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3), 0 0 0 2px rgba(0,0,0,0.1);
+}
+
+/* ========== SCREEN SYSTEM ========== */
+.screen {
+  position: absolute;
+  inset: 0;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  opacity: 0;
+  transform: translateX(100%);
+  transition: transform 350ms cubic-bezier(0.4, 0, 0.2, 1), opacity 350ms cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
+.screen.active {
+  opacity: 1;
+  transform: translateX(0);
+  pointer-events: auto;
+  z-index: 2;
+}
+
+.screen.exit-left {
+  opacity: 0;
+  transform: translateX(-30%);
+  z-index: 1;
+}
+
+.screen.exit-right {
+  opacity: 0;
+  transform: translateX(30%);
+  z-index: 1;
+}
+
+.screen.enter-from-left {
+  transform: translateX(-100%);
+}
+
+/* ========== NAV BAR (HOME) ========== */
+.nav-home {
+  background: var(--navy);
+  padding: 48px 20px 0;
+  flex-shrink: 0;
+}
+
+.nav-home-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 16px;
+}
+
+.avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #7A8195;
+  flex-shrink: 0;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.greeting { flex: 1; }
+.greeting h1 { font-size: 22px; font-weight: 700; color: var(--white); }
+.greeting p { font-size: 13px; color: #B5B9C3; margin-top: 1px; }
+.greeting small { font-size: 11px; color: #8B90A0; }
+
+.accent-bar {
+  height: 4px;
+  background: var(--amber);
+  margin: 0 -20px;
+}
+
+/* ========== NAV BAR (INNER) ========== */
+.nav-inner {
+  background: var(--navy);
+  padding: 48px 16px 0;
+  flex-shrink: 0;
+}
+
+.nav-inner-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 12px;
+}
+
+.back-btn {
+  width: 52px;
+  height: 44px;
+  background: var(--navy-light);
+  border: none;
+  border-radius: 12px;
+  color: var(--white);
+  font-size: 24px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+.back-btn:active { background: #3A5080; }
+
+.nav-title {
+  flex: 1;
+  text-align: center;
+}
+.nav-title small { font-size: 11px; color: var(--amber); display: block; }
+.nav-title h2 { font-size: 22px; font-weight: 700; color: var(--white); }
+
+.help-btn {
+  width: 52px;
+  height: 44px;
+  background: var(--purple);
+  border: none;
+  border-radius: 12px;
+  color: var(--white);
+  font-size: 20px;
+  font-weight: 700;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+.help-btn:active { background: #6A4E96; }
+
+/* ========== NAV BAR (SUCCESS) ========== */
+.nav-success {
+  background: var(--navy);
+  padding: 44px 16px 16px;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+.nav-success h2 {
+  flex: 1;
+  text-align: center;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--white);
+}
+
+/* ========== PROGRESS BAR ========== */
+.progress-bar {
+  display: flex;
+  height: 4px;
+  margin: 0 -16px;
+}
+.progress-fill { background: var(--amber); transition: width 0.3s; }
+.progress-empty { background: var(--warm-grey); flex: 1; }
+
+/* ========== TABLE BADGE ========== */
+.badge-area {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 8px;
+  row-gap: 4px;
+}
+.table-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--navy);
+  color: var(--white);
+  padding: 10px 16px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* ========== HOME CARDS ========== */
+.home-cards {
+  padding: 28px 24px;
+  display: grid;
+  grid-template-columns: 170px 170px;
+  grid-template-rows: 178px 178px;
+  justify-content: center;
+  align-content: start;
+  gap: 20px;
+  flex: 1;
+}
+
+.home-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 24px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+  width: 170px;
+  height: 178px;
+  position: relative;
+  font-family: var(--font);
+}
+.home-card:active { transform: scale(0.97); box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+
+.notify-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 22px;
+  height: 22px;
+  background: #E74C3C;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 4px rgba(231,76,60,0.4);
+}
+
+.home-card .icon-circle {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+}
+
+.home-card .label {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--navy);
+  text-align: center;
+}
+
+.home-card:nth-child(1) .icon-circle { background: #F5EDDF; }
+.home-card:nth-child(2) .icon-circle { background: #DEF0EE; }
+.home-card:nth-child(3) .icon-circle { background: #E3F0E3; }
+.home-card:nth-child(4) .icon-circle { background: #EBE3F5; }
+
+.home-card:nth-child(1) { border-color: #48A87A; }
+.home-card:nth-child(2) { border-color: #48A8A0; }
+.home-card:nth-child(3) { border-color: #48A87A; }
+.home-card:nth-child(4) { border-color: var(--purple); }
+
+/* ========== CONTENT AREA ========== */
+.content {
+  padding: 16px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ========== ZONE SECTIONS ========== */
+.zone { display: flex; flex-direction: column; gap: 10px; }
+
+.zone-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--navy);
+}
+
+.zone-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.tables-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.table-btn {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 12px 8px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: var(--font);
+}
+.table-btn:active { transform: scale(0.96); }
+.table-btn.selected {
+  border-color: var(--amber);
+  border-width: 2px;
+  background: #FFFCF5;
+  position: relative;
+}
+.table-btn.selected::after {
+  content: '✓';
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 22px;
+  height: 22px;
+  background: var(--amber);
+  color: #fff;
+  border-radius: 50%;
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+.table-btn .num { font-size: 22px; font-weight: 700; color: var(--navy); }
+.table-btn.selected .num { color: var(--amber); }
+.table-btn .seats { font-size: 10px; color: var(--text-grey); margin-top: 2px; }
+
+.hint-text { font-size: 12px; color: var(--text-grey); }
+
+/* ========== CTA BUTTONS ========== */
+.cta {
+  padding: 16px 24px 32px;
+  flex-shrink: 0;
+}
+
+.cta-btn {
+  width: 100%;
+  padding: 20px;
+  border: none;
+  border-radius: 16px;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--white);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: transform 0.1s, opacity 0.15s;
+}
+.cta-btn:active { transform: scale(0.98); }
+.cta-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.cta-btn.amber { background: var(--amber); }
+.cta-btn.green { background: var(--green); }
+.cta-btn.purple { background: var(--purple); }
+
+/* ========== CATEGORY TABS ========== */
+.tabs {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.tabs::-webkit-scrollbar { display: none; }
+
+.tab {
+  padding: 8px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--white);
+  color: var(--navy);
+  transition: all 0.2s;
+}
+.tab.active {
+  background: var(--amber);
+  border-color: var(--amber);
+  color: var(--white);
+}
+
+/* ========== DRINK CARDS ========== */
+.drinks-grid {
+  display: grid;
+  grid-template-columns: 168px 168px;
+  justify-content: center;
+  gap: 12px;
+  flex: 1;
+  align-content: start;
+}
+
+.drink-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: border-color 0.2s;
+  width: 168px;
+  height: 120px;
+}
+.drink-card.has-qty {
+  border-color: var(--amber);
+  border-width: 2px;
+}
+
+.drink-card .card-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.drink-card .card-info {
+  display: flex;
+  flex-direction: column;
+}
+.drink-card .emoji { font-size: 18px; }
+.drink-card .icon-bg {
+  width: 31px;
+  height: 31px;
+  border-radius: 50%;
+  background: #F5F0E8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.drink-card.has-qty .icon-bg { background: #F5EDDF; }
+.drink-card .name { font-size: 14px; font-weight: 600; color: var(--navy); }
+.drink-card .vol { font-size: 12px; font-weight: 400; color: var(--text-grey); }
+
+.stepper {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: var(--bg);
+  border-radius: 14px;
+  padding: 5px 12px;
+  margin-top: auto;
+  align-self: center;
+}
+.stepper button {
+  background: none;
+  border: none;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--amber);
+  cursor: pointer;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.stepper .qty { font-size: 15px; font-weight: 600; color: var(--navy); min-width: 16px; text-align: center; }
+
+.add-btn {
+  font-size: 20px;
+  color: var(--text-grey);
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 4px;
+  margin-top: auto;
+  align-self: center;
+}
+
+
+/* ========== ORDER SUMMARY CARD ========== */
+.summary-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.summary-card .subtitle { font-size: 12px; color: var(--text-grey); }
+
+.order-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+}
+.order-row .emoji { font-size: 16px; }
+.order-row .item-name { flex: 1; font-size: 16px; font-weight: 600; color: var(--navy); }
+.order-row .item-qty { font-size: 16px; font-weight: 600; color: var(--navy); }
+
+.divider { height: 1px; background: var(--border); }
+
+.total { font-size: 14px; font-weight: 500; color: var(--navy); }
+
+.read-aloud {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #E8E4DF;
+  border: none;
+  border-radius: 20px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--navy);
+  cursor: pointer;
+  align-self: flex-start;
+}
+
+.text-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1.5px solid var(--border);
+  border-radius: 24px;
+  padding: 10px 28px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-grey);
+  cursor: pointer;
+}
+.text-link:active { background: rgba(0,0,0,0.03); }
+
+/* ========== SUCCESS SCREEN ========== */
+.success-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 48px 24px 32px;
+  gap: 8px;
+}
+
+.success-circle {
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  background: var(--green-light);
+  border: 2.5px solid var(--green);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 36px;
+  color: var(--green);
+  margin-bottom: 8px;
+  animation: scaleIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes scaleIn {
+  from { transform: scale(0); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.success-content h1 { font-size: 26px; font-weight: 700; color: var(--navy); }
+.success-content .sub { font-size: 15px; font-weight: 600; color: var(--navy); }
+.success-content .status { font-size: 13px; color: var(--text-grey); }
+.success-content .spacer { height: 84px; flex-shrink: 0; }
+
+/* ========== ORDER CARDS (DELIVER/PAYMENT) ========== */
+/* ========== DELIVERY CARDS ========== */
+.order-card {
+  background: var(--white);
+  border-radius: 16px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  cursor: pointer;
+  transition: transform 0.15s;
+  width: 350px;
+}
+.order-card:active { transform: scale(0.98); }
+.order-card.ready-card { background: #F5FBF7; }
+
+.order-card-top {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.table-num {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--white);
+  flex-shrink: 0;
+}
+
+.order-details { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+.order-details .zone-name { font-size: 13px; font-weight: 600; color: #5C5652; }
+.order-details .item-line { font-size: 12px; font-weight: 400; color: var(--navy); }
+.order-details .price { font-size: 11px; font-weight: 400; color: var(--navy); margin-top: 4px; }
+
+.order-card-badge {
+  display: flex;
+  justify-content: center;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 16px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 500;
+  min-width: 200px;
+}
+.status-badge.delivered { background: #E8F5E9; color: #2E7D32; }
+.status-badge.preparing { background: #FFF3E0; color: var(--amber); }
+.status-badge.ready { background: var(--green); color: var(--white); font-size: 12px; font-weight: 500; min-width: auto; padding: 6px 14px; border-radius: 14px; }
+.status-badge.awaiting { background: var(--red-light); color: var(--red); }
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.section-header .label { flex: 1; font-size: 14px; font-weight: 400; color: var(--text-grey); }
+
+.hint-amber-bar {
+  background: #FFF3E0;
+  border-radius: 14px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--amber);
+  display: inline-flex;
+  align-items: center;
+}
+
+.deliver-divider {
+  width: 350px;
+  height: 1px;
+  background: #D9D9D9;
+}
+
+.status-badge.deliver-action {
+  background: var(--amber);
+  color: var(--white);
+  cursor: pointer;
+  transition: transform 0.15s, opacity 0.15s;
+}
+.status-badge.deliver-action:active { transform: scale(0.96); }
+
+.undo-link {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--red);
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 4px 12px;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  animation: fadeInUp 0.25s ease;
+}
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.undo-timer {
+  font-size: 11px;
+  color: var(--text-grey);
+  font-weight: 400;
+}
+
+.payment-link-bar {
+  width: 350px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 0;
+}
+.payment-link-bar button {
+  background: transparent;
+  border: 1.5px solid var(--border);
+  border-radius: 24px;
+  padding: 10px 20px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--navy);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.payment-link-bar button:active { background: rgba(0,0,0,0.03); }
+
+.chevron { font-size: 24px; color: var(--text-grey); flex-shrink: 0; }
+
+.nav-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 80px;
+  height: 24px;
+  padding: 0 12px;
+  background: var(--navy-light);
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--white);
+}
+
+/* ========== HELP OPTION ROWS ========== */
+.help-row {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 18px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: transform 0.15s, background 0.15s;
+  width: 100%;
+  font-family: var(--font);
+  text-align: left;
+}
+.help-row:active { transform: scale(0.98); background: #F5F3F0; }
+
+.help-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.help-text { flex: 1; }
+.help-text .title { font-size: 16px; font-weight: 600; color: var(--navy); }
+.help-text .desc { font-size: 13px; color: var(--text-grey); margin-top: 2px; }
+
+/* ========== NEED HELP SCREEN ========== */
+.manager-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 20px 0 8px;
+}
+
+.manager-avatar {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: var(--purple-light);
+  border: 2px solid var(--purple);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+}
+
+.manager-name { font-size: 20px; font-weight: 700; color: var(--navy); }
+.manager-role { font-size: 14px; color: var(--text-grey); }
+.manager-hint { font-size: 13px; color: var(--text-grey); }
+
+.need-help-option {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: transform 0.15s;
+  font-family: var(--font);
+  text-align: left;
+}
+.need-help-option:active { transform: scale(0.98); }
+.need-help-option .emoji { font-size: 20px; }
+.need-help-option .label { flex: 1; font-size: 15px; font-weight: 500; color: var(--navy); }
+
+/* ========== QUESTION MARK HEADING ========== */
+.screen-heading { font-size: 16px; font-weight: 600; color: var(--navy); }
+
+/* ========== SCROLLABLE ========== */
+.scrollable { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+
+/* ========== FOCUS & ACCESSIBILITY ========== */
+*:focus-visible {
+  outline: 3px solid var(--amber);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+.home-card:focus-visible,
+.table-btn:focus-visible,
+.tab:focus-visible,
+.need-help-option:focus-visible,
+.help-row:focus-visible {
+  outline: 3px solid var(--amber);
+  outline-offset: 2px;
+}
+
+/* Touch target minimum 44x44 */
+.stepper button {
+  min-width: 44px;
+  min-height: 44px;
+}
+.add-btn {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+/* Improved colour contrast */
+.greeting p { color: #A0A4B0; }
+.greeting small { color: #9196A4; }
+.hint-text { color: #5C5652; }
+.table-btn .seats { color: #5C5652; }
+</style>
+</head>
+<body>
+
+<div id="phone">
+
+  <!-- ==================== SCREEN 1: HOME ==================== -->
+  <section id="screen-home" class="screen active" aria-label="Home">
+    <div class="nav-home">
+      <div class="nav-home-row">
+        <div class="avatar" aria-hidden="true">
+          <svg viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Alex's avatar">
+            <rect width="56" height="56" rx="28" fill="#5C6378"/>
+            <circle cx="28" cy="21" r="9" fill="#A3AAB8"/>
+            <ellipse cx="28" cy="42" rx="15" ry="12" fill="#A3AAB8"/>
+            <circle cx="28" cy="21" r="8" fill="#D4D8E0"/>
+            <ellipse cx="28" cy="41" rx="14" ry="11" fill="#D4D8E0"/>
+            <!-- Hair -->
+            <path d="M18 20c0-6 4-11 10-11s10 5 10 11c0 1-1 2-2 1.5-1-.5-1.5-3-3-4.5-2-2-4-2-5-2s-3 0-5 2c-1.5 1.5-2 4-3 4.5-1 .5-2-.5-2-1.5z" fill="#6B4E2A"/>
+            <!-- Eyes -->
+            <circle cx="24" cy="21" r="1.5" fill="#3D4452"/>
+            <circle cx="32" cy="21" r="1.5" fill="#3D4452"/>
+            <!-- Smile -->
+            <path d="M25 25.5c0 0 1.5 2 3 2s3-2 3-2" stroke="#3D4452" stroke-width="1" stroke-linecap="round" fill="none"/>
+            <!-- Shirt collar -->
+            <path d="M20 36c2-3 5-5 8-5s6 2 8 5" stroke="#4A5568" stroke-width="0.8" fill="none"/>
+          </svg>
+        </div>
+        <div class="greeting">
+          <h1>Hi, Alex</h1>
+          <p>What do you need?</p>
+          <small>Shift: 10am – 3pm</small>
+        </div>
+        <button class="help-btn" aria-label="Get help" onclick="navigate('need-help')">?</button>
+      </div>
+      <div class="accent-bar"></div>
+    </div>
+    <div class="home-cards" role="group" aria-label="Main actions">
+      <button class="home-card" onclick="navigate('table-select')" aria-label="Take Order">
+        <div class="icon-circle" aria-hidden="true">🍹</div>
+        <div class="label">Take Order</div>
+      </button>
+      <button class="home-card" onclick="navigate('deliver')" aria-label="Deliver Drinks">
+        <span class="notify-badge" id="deliver-badge" style="display:none" role="status" aria-live="polite"></span>
+        <div class="icon-circle" aria-hidden="true">🏃</div>
+        <div class="label">Deliver Drinks</div>
+      </button>
+      <button class="home-card" onclick="navigate('payment-queue')" aria-label="Payment Help">
+        <div class="icon-circle" aria-hidden="true">💳</div>
+        <div class="label">Payment Help</div>
+      </button>
+      <button class="home-card" onclick="navigate('need-help')" aria-label="Ask for Help">
+        <div class="icon-circle" aria-hidden="true">💁</div>
+        <div class="label">Ask for Help</div>
+      </button>
+    </div>
+  </section>
+
+  <!-- ==================== SCREEN 2: TABLE SELECT ==================== -->
+  <section id="screen-table-select" class="screen" aria-label="Select a table">
+    <div class="nav-inner">
+      <div class="nav-inner-row">
+        <button class="back-btn" aria-label="Go back" onclick="goBack()">‹</button>
+        <div class="nav-title">
+          <small>Step 1 of 3</small>
+          <h2>Which table?</h2>
+        </div>
+        <button class="help-btn" aria-label="Get help" onclick="navigate('need-help')">?</button>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill" style="width:33%"></div>
+        <div class="progress-empty"></div>
+      </div>
+    </div>
+    <div class="content scrollable" id="table-content">
+      <div id="table-badge-area" class="badge-area"></div>
+      <p class="hint-text" id="table-hint" style="display:none">Tap again to deselect</p>
+
+      <div class="zone">
+        <div class="zone-label"><span class="zone-dot" style="background:var(--amber)"></span>🪟 Window Side</div>
+        <div class="tables-grid" role="group" aria-label="Window Side tables">
+          <button class="table-btn" role="switch" aria-checked="false" aria-label="Table 1, 2 seats, Window" onclick="selectTable(this,1,'Window','🪟','2 seats')"><div class="num">1</div><div class="seats">2 seats</div></button>
+          <button class="table-btn" role="switch" aria-checked="false" aria-label="Table 2, 4 seats, Window" onclick="selectTable(this,2,'Window','🪟','4 seats')"><div class="num">2</div><div class="seats">4 seats</div></button>
+          <button class="table-btn" role="switch" aria-checked="false" aria-label="Table 3, 2 seats, Window" onclick="selectTable(this,3,'Window','🪟','2 seats')"><div class="num">3</div><div class="seats">2 seats</div></button>
+        </div>
+      </div>
+
+      <div class="zone">
+        <div class="zone-label"><span class="zone-dot" style="background:#00A89D"></span>🍽️ Middle</div>
+        <div class="tables-grid" role="group" aria-label="Middle tables">
+          <button class="table-btn" role="switch" aria-checked="false" aria-label="Table 4, 6 seats, Middle" onclick="selectTable(this,4,'Middle','🍽️','6 seats')"><div class="num">4</div><div class="seats">6 seats</div></button>
+          <button class="table-btn" role="switch" aria-checked="false" aria-label="Table 5, 4 seats, Middle" onclick="selectTable(this,5,'Middle','🍽️','4 seats')"><div class="num">5</div><div class="seats">4 seats</div></button>
+          <button class="table-btn" role="switch" aria-checked="false" aria-label="Table 6, 4 seats, Middle" onclick="selectTable(this,6,'Middle','🍽️','4 seats')"><div class="num">6</div><div class="seats">4 seats</div></button>
+        </div>
+      </div>
+
+      <div class="zone">
+        <div class="zone-label"><span class="zone-dot" style="background:var(--purple)"></span>🍸 Bar Area</div>
+        <div class="tables-grid" role="group" aria-label="Bar Area tables">
+          <button class="table-btn" role="switch" aria-checked="false" aria-label="Table 7, 2 stools, Bar Area" onclick="selectTable(this,7,'Bar Area','🍸','2 stools')"><div class="num">7</div><div class="seats">2 stools</div></button>
+          <button class="table-btn" role="switch" aria-checked="false" aria-label="Table 8, 3 stools, Bar Area" onclick="selectTable(this,8,'Bar Area','🍸','3 stools')"><div class="num">8</div><div class="seats">3 stools</div></button>
+          <button class="table-btn" role="switch" aria-checked="false" aria-label="Table 9, 2 stools, Bar Area" onclick="selectTable(this,9,'Bar Area','🍸','2 stools')"><div class="num">9</div><div class="seats">2 stools</div></button>
+        </div>
+      </div>
+    </div>
+    <div class="cta">
+      <button class="cta-btn amber" id="next-to-drinks" onclick="navigate('drinks')" disabled>Next →</button>
+    </div>
+  </section>
+
+  <!-- ==================== SCREEN 3: DRINKS ==================== -->
+  <section id="screen-drinks" class="screen" aria-label="Pick drinks">
+    <div class="nav-inner">
+      <div class="nav-inner-row">
+        <button class="back-btn" aria-label="Go back" onclick="goBack()">‹</button>
+        <div class="nav-title">
+          <small>Step 2 of 3</small>
+          <h2>Pick drinks</h2>
+        </div>
+        <button class="help-btn" aria-label="Get help" onclick="navigate('need-help')">?</button>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill" style="width:66%"></div>
+        <div class="progress-empty"></div>
+      </div>
+    </div>
+    <div class="content scrollable">
+      <div id="drinks-badge-area" class="badge-area"></div>
+      <div class="tabs" id="drink-tabs"></div>
+      <div class="drinks-grid" id="drinks-grid"></div>
+    </div>
+    <div class="cta">
+      <button class="cta-btn amber" id="drinks-next-btn" onclick="navigate('confirm')" disabled>Next →</button>
+    </div>
+  </section>
+
+  <!-- ==================== SCREEN 4: CONFIRM ==================== -->
+  <section id="screen-confirm" class="screen" aria-label="Check order">
+    <div class="nav-inner">
+      <div class="nav-inner-row">
+        <button class="back-btn" aria-label="Go back" onclick="goBack()">‹</button>
+        <div class="nav-title">
+          <small>Step 3 of 3</small>
+          <h2>Check order</h2>
+        </div>
+        <button class="help-btn" aria-label="Get help" onclick="navigate('need-help')">?</button>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill" style="width:100%"></div>
+        <div class="progress-empty"></div>
+      </div>
+    </div>
+    <div class="content scrollable">
+      <div id="confirm-badge-area" class="badge-area"></div>
+      <div class="summary-card" id="order-summary"></div>
+    </div>
+    <div class="cta" style="display:flex; flex-direction:column; gap:12px; align-items:center;">
+      <button class="cta-btn green" onclick="navigate('order-sent')">✓ Send Order</button>
+      <button class="text-link" onclick="goBack()">Edit order</button>
+    </div>
+  </section>
+
+  <!-- ==================== SCREEN 5: ORDER SENT ==================== -->
+  <section id="screen-order-sent" class="screen" aria-label="Order sent">
+    <div class="nav-success">
+      <h2>Order Complete</h2>
+      <button class="help-btn" aria-label="Get help" onclick="navigate('need-help')">?</button>
+    </div>
+    <div class="success-content">
+      <div class="success-circle" id="success-check">✓</div>
+      <h1>Order Sent!</h1>
+      <p class="sub" id="sent-summary">Table 3 · Window — 3 drinks</p>
+      <p class="status">Being prepared now</p>
+      <div class="spacer"></div>
+      <div style="width:100%;padding:0 8px;display:flex;flex-direction:column;gap:12px;align-items:center;">
+        <button class="cta-btn amber" style="width:100%" onclick="resetAndGoHome()">Back to Home</button>
+        <button class="text-link" onclick="state.history = ['home']; navigate('deliver', true)">See order</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== SCREEN 6: DELIVER DRINKS ==================== -->
+  <section id="screen-deliver" class="screen" aria-label="Deliver drinks">
+    <div class="nav-inner" style="padding-bottom:14px">
+      <div class="nav-inner-row">
+        <button class="back-btn" aria-label="Go back" onclick="goBack()">‹</button>
+        <div class="nav-title">
+          <h2>Deliver Drinks</h2>
+        </div>
+        <button class="help-btn" aria-label="Get help" onclick="navigate('need-help')">?</button>
+      </div>
+      <div style="display:flex;justify-content:center;margin-top:-4px">
+        <span class="nav-count" id="deliver-order-count">2 orders</span>
+      </div>
+    </div>
+    <div class="content scrollable" style="align-items:center;gap:12px" id="deliver-content">
+    </div>
+  </section>
+
+  <!-- ==================== SCREEN 7a: PAYMENT QUEUE ==================== -->
+  <section id="screen-payment-queue" class="screen" aria-label="Payment queue">
+    <div class="nav-inner" style="padding-bottom:16px">
+      <div class="nav-inner-row">
+        <button class="back-btn" aria-label="Go back" onclick="goBack()">‹</button>
+        <div class="nav-title">
+          <h2>Payment</h2>
+        </div>
+        <button class="help-btn" aria-label="Get help" onclick="navigate('need-help')">?</button>
+      </div>
+    </div>
+    <div class="content scrollable" style="padding:24px 20px 20px" id="payment-queue-content">
+    </div>
+  </section>
+
+  <!-- ==================== SCREEN 8: PAYMENT HELP ==================== -->
+  <section id="screen-payment-help" class="screen" aria-label="Payment help">
+    <div class="nav-inner" style="padding-bottom:16px">
+      <div class="nav-inner-row">
+        <button class="back-btn" aria-label="Go back" onclick="goBack()">‹</button>
+        <div class="nav-title">
+          <h2>Payment Help</h2>
+        </div>
+        <button class="help-btn" aria-label="Get help" onclick="navigate('need-help')">?</button>
+      </div>
+    </div>
+    <div class="content scrollable">
+      <div class="badge-area" id="payment-help-badge"><div class="table-badge">🪟 Table 3 · Window</div></div>
+      <p class="screen-heading">How can you help?</p>
+
+      <button class="help-row" role="button" aria-label="Bring Machine — Bring it to their table" onclick="alert('Requesting card machine for the table...')">
+        <div class="help-icon" aria-hidden="true">🖥️</div>
+        <div class="help-text"><div class="title">Bring Machine</div><div class="desc">Bring it to their table</div></div>
+        <span class="chevron" aria-hidden="true">›</span>
+      </button>
+      <button class="help-row" role="button" aria-label="Print Bill — Print and bring to table" onclick="alert('Bill is printing...')">
+        <div class="help-icon" aria-hidden="true">🧾</div>
+        <div class="help-text"><div class="title">Print Bill</div><div class="desc">Print and bring to table</div></div>
+        <span class="chevron" aria-hidden="true">›</span>
+      </button>
+      <button class="help-row" role="button" aria-label="Split Bill — Manager will help" onclick="navigate('need-help')">
+        <div class="help-icon" aria-hidden="true">➗</div>
+        <div class="help-text"><div class="title">Split Bill</div><div class="desc">Manager will help</div></div>
+        <span class="chevron" aria-hidden="true">›</span>
+      </button>
+      <button class="help-row" role="button" aria-label="Paid — Already paid" onclick="markPaid()">
+        <div class="help-icon" aria-hidden="true">✅</div>
+        <div class="help-text"><div class="title">Paid</div><div class="desc">Already paid</div></div>
+        <span class="chevron" aria-hidden="true">›</span>
+      </button>
+    </div>
+  </section>
+
+  <!-- ==================== SCREEN 9: NEED HELP ==================== -->
+  <section id="screen-need-help" class="screen" aria-label="Need help">
+    <div class="nav-inner" style="padding-bottom:16px">
+      <div class="nav-inner-row">
+        <button class="back-btn" aria-label="Go back" onclick="goBack()">‹</button>
+        <div class="nav-title">
+          <h2>Need Help?</h2>
+        </div>
+        <button class="help-btn" style="opacity:0;pointer-events:none">?</button>
+      </div>
+    </div>
+    <div class="content scrollable" style="align-items:center">
+      <div class="manager-section">
+        <div class="manager-avatar">👤</div>
+        <div class="manager-name">Sarah can help</div>
+        <div class="manager-role">Floor Manager</div>
+        <div class="manager-hint">It's okay to ask 😊</div>
+      </div>
+
+      <button class="cta-btn purple" style="width:100%" onclick="goBack()">📞 Call Manager</button>
+
+      <button class="need-help-option" style="width:100%" aria-label="I need a break" onclick="alert('Break request sent to Sarah')"><span class="emoji" aria-hidden="true">😮‍💨</span><span class="label">I need a break</span></button>
+      <button class="need-help-option" style="width:100%" aria-label="Explain something" onclick="alert('Sarah will come to explain')"><span class="emoji" aria-hidden="true">💬</span><span class="label">Explain something</span></button>
+      <button class="need-help-option" style="width:100%" aria-label="Customer upset" onclick="alert('Sarah is on her way to help')"><span class="emoji" aria-hidden="true">😟</span><span class="label">Customer upset</span></button>
+
+      <button class="text-link" onclick="goBack()">Go back</button>
+    </div>
+  </section>
+
+</div>
+
+<script>
+// ========== STATE ==========
+const state = {
+  history: [],
+  selectedTables: [],
+  cart: {},
+  activeTab: 'Soft',
+  confirmedOrders: 0,
+  paymentHelpTable: null,
+};
+
+function updateDeliverBadge() {
+  const badge = document.getElementById('deliver-badge');
+  if (!badge) return;
+  const activeOrders = deliveryOrders.filter(o =>
+    o.status === 'ready' || o.status === 'delivered' || o.status === 'awaiting'
+  ).length;
+  if (activeOrders > 0) {
+    badge.textContent = activeOrders;
+    badge.setAttribute('aria-label', `${activeOrders} order${activeOrders !== 1 ? 's' : ''} to deliver`);
+    badge.style.display = 'flex';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+const drinks = [
+  { name: 'Coke', vol: '330ml', category: 'Soft', emoji: '🥤' },
+  { name: 'Orange Juice', vol: '250ml', category: 'Soft', emoji: '🍊' },
+  { name: 'Lemonade', vol: '330ml', category: 'Soft', emoji: '🍋' },
+  { name: 'Still Water', vol: '500ml', category: 'Soft', emoji: '💧' },
+  { name: 'Sparkling Water', vol: '500ml', category: 'Soft', emoji: '🫧' },
+  { name: 'Cordial', vol: '200ml', category: 'Soft', emoji: '🧃' },
+  { name: 'Espresso', vol: '30ml', category: 'Hot', emoji: '☕' },
+  { name: 'Latte', vol: '350ml', category: 'Hot', emoji: '☕' },
+  { name: 'Tea', vol: '250ml', category: 'Hot', emoji: '🍵' },
+  { name: 'Hot Chocolate', vol: '300ml', category: 'Hot', emoji: '🍫' },
+  { name: 'Lager (Pint)', vol: '568ml', category: 'Beer', emoji: '🍺' },
+  { name: 'IPA', vol: '330ml', category: 'Beer', emoji: '🍺' },
+  { name: 'Cider', vol: '500ml', category: 'Beer', emoji: '🍎' },
+  { name: 'Red Wine', vol: '175ml', category: 'Wine', emoji: '🍷' },
+  { name: 'White Wine', vol: '175ml', category: 'Wine', emoji: '🥂' },
+  { name: 'Prosecco', vol: '125ml', category: 'Wine', emoji: '🥂' },
+];
+
+const categories = ['Soft', 'Hot', 'Beer', 'Wine'];
+const catEmoji = { Soft: '🥤', Hot: '☕', Beer: '🍺', Wine: '🍷' };
+
+// ========== NAVIGATION ==========
+let isTransitioning = false;
+
+function navigate(screenId, skipHistory = false) {
+  if (isTransitioning) return;
+  const current = document.querySelector('.screen.active');
+  const next = document.getElementById('screen-' + screenId);
+  if (!current || !next || current === next) return;
+  isTransitioning = true;
+
+  if (!skipHistory) {
+    state.history.push(current.id.replace('screen-', ''));
+  }
+
+  // Trigger render on target before showing
+  if (screenId === 'drinks') renderDrinks();
+  if (screenId === 'confirm') renderConfirm();
+  if (screenId === 'order-sent') {
+    state.confirmedOrders++;
+    updateDeliverBadge();
+    renderSentSummary();
+  }
+  if (screenId === 'table-select') renderTableBadge();
+  if (screenId === 'deliver') renderDeliver();
+  if (screenId === 'payment-queue') renderPaymentQueue();
+
+  // Position next screen off-right, no transition
+  next.style.transition = 'none';
+  next.style.transform = 'translateX(100%)';
+  next.style.opacity = '1';
+  next.style.pointerEvents = 'auto';
+  next.style.zIndex = '2';
+  next.offsetHeight; // force reflow
+
+  // Enable transitions
+  next.style.transition = '';
+  current.style.zIndex = '1';
+
+  // Animate in
+  next.style.transform = 'translateX(0)';
+  current.style.transform = 'translateX(-30%)';
+  current.style.opacity = '0.4';
+
+  setTimeout(() => {
+    current.classList.remove('active');
+    current.style.transform = '';
+    current.style.opacity = '';
+    current.style.zIndex = '';
+    current.style.transition = '';
+    next.classList.add('active');
+    next.style.transform = '';
+    next.style.opacity = '';
+    next.style.zIndex = '';
+    next.style.pointerEvents = '';
+    next.scrollTop = 0;
+    isTransitioning = false;
+    // Focus management: move focus to new screen's heading or first focusable
+    const focusTarget = next.querySelector('h1, h2, [autofocus]') || next.querySelector('button, [tabindex="0"]');
+    if (focusTarget) { focusTarget.setAttribute('tabindex', '-1'); focusTarget.focus({ preventScroll: true, focusVisible: false }); }
+  }, 380);
+}
+
+function goBack() {
+  if (isTransitioning) return;
+  if (state.history.length === 0) { navigate('home', true); return; }
+  const prev = state.history.pop();
+  const current = document.querySelector('.screen.active');
+  const next = document.getElementById('screen-' + prev);
+  if (!current || !next) return;
+  isTransitioning = true;
+
+  // Re-render dynamic screens when going back to them
+  if (prev === 'payment-queue') renderPaymentQueue();
+  if (prev === 'deliver') renderDeliver();
+  if (prev === 'home') updateDeliverBadge();
+
+  // Position next screen off-left, no transition
+  next.style.transition = 'none';
+  next.style.transform = 'translateX(-30%)';
+  next.style.opacity = '0.4';
+  next.style.pointerEvents = 'auto';
+  next.style.zIndex = '1';
+  next.offsetHeight;
+
+  // Enable transitions
+  next.style.transition = '';
+  current.style.zIndex = '2';
+
+  // Animate
+  next.style.transform = 'translateX(0)';
+  next.style.opacity = '1';
+  current.style.transform = 'translateX(100%)';
+  current.style.opacity = '0';
+
+  setTimeout(() => {
+    current.classList.remove('active');
+    current.style.transform = '';
+    current.style.opacity = '';
+    current.style.zIndex = '';
+    current.style.transition = '';
+    next.classList.add('active');
+    next.style.transform = '';
+    next.style.opacity = '';
+    next.style.zIndex = '';
+    next.style.pointerEvents = '';
+    isTransitioning = false;
+    // Focus management: move focus to previous screen
+    const focusTarget = next.querySelector('h1, h2') || next.querySelector('button, [tabindex="0"]');
+    if (focusTarget) { focusTarget.setAttribute('tabindex', '-1'); focusTarget.focus({ preventScroll: true, focusVisible: false }); }
+  }, 380);
+}
+
+function resetAndGoHome() {
+  state.history = [];
+  state.cart = {};
+  state.selectedTables = [];
+  state.activeTab = 'Soft';
+  // Clear table button visual selection
+  document.querySelectorAll('.table-btn.selected').forEach(btn => {
+    btn.classList.remove('selected');
+    btn.setAttribute('aria-checked', 'false');
+  });
+  navigate('home', true);
+}
+
+// ========== TABLE SELECT ==========
+function selectTable(el, num, zone, emoji, seats) {
+  const wasSelected = el.classList.contains('selected');
+
+  if (wasSelected) {
+    el.classList.remove('selected');
+    el.setAttribute('aria-checked', 'false');
+    state.selectedTables = state.selectedTables.filter(t => t.num !== num);
+  } else {
+    el.classList.add('selected');
+    el.setAttribute('aria-checked', 'true');
+    state.selectedTables.push({ num, zone, emoji, seats });
+  }
+  renderTableBadge();
+}
+
+function renderTableBadge() {
+  const areas = ['table-badge-area', 'drinks-badge-area', 'confirm-badge-area'];
+  const hint = document.getElementById('table-hint');
+  const tables = state.selectedTables;
+  const hasSelection = tables.length > 0;
+
+  const badgeHtml = tables.map(t =>
+    `<div class="table-badge">${t.emoji} Table ${t.num} · ${t.zone}</div>`
+  ).join('');
+
+  areas.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = hasSelection ? badgeHtml : '';
+  });
+
+  if (hint) hint.style.display = hasSelection ? 'block' : 'none';
+  const btn = document.getElementById('next-to-drinks');
+  if (btn) btn.disabled = !hasSelection;
+}
+
+// ========== DRINKS ==========
+function renderDrinks() {
+  // Tabs
+  const tabsEl = document.getElementById('drink-tabs');
+  tabsEl.setAttribute('role', 'tablist');
+  tabsEl.setAttribute('aria-label', 'Drink categories');
+  tabsEl.innerHTML = categories.map(c =>
+    `<button class="tab ${c === state.activeTab ? 'active' : ''}" role="tab" aria-selected="${c === state.activeTab}" aria-label="${c} drinks" onclick="switchTab('${c}')">${catEmoji[c]} ${c}</button>`
+  ).join('');
+
+  // Grid
+  const grid = document.getElementById('drinks-grid');
+
+  if (state.selectedTables.length === 0) {
+    grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:40px 0;color:var(--text-grey);font-size:14px;">
+      Select a table first to pick drinks
+    </div>`;
+    renderTableBadge();
+    updateCartBar();
+    return;
+  }
+
+  const filtered = drinks.filter(d => d.category === state.activeTab);
+  grid.innerHTML = filtered.map(d => {
+    const qty = state.cart[d.name] || 0;
+    return `
+      <div class="drink-card ${qty > 0 ? 'has-qty' : ''}">
+        <div class="card-top">
+          <div class="icon-bg"><span class="emoji">${d.emoji}</span></div>
+          <div class="card-info">
+            <div class="name">${d.name}</div>
+            <div class="vol">${d.vol}</div>
+          </div>
+        </div>
+        ${qty > 0
+          ? `<div class="stepper" role="group" aria-label="${d.name} quantity">
+              <button aria-label="Remove one ${d.name}" onclick="changeQty('${d.name}',-1)">–</button>
+              <span class="qty" aria-live="polite" aria-label="${qty} ${d.name}">${qty}</span>
+              <button aria-label="Add one ${d.name}" onclick="changeQty('${d.name}',1)">+</button>
+            </div>`
+          : `<button class="add-btn" aria-label="Add ${d.name}" onclick="changeQty('${d.name}',1)">+</button>`
+        }
+      </div>`;
+  }).join('');
+
+  renderTableBadge();
+  updateCartBar();
+}
+
+function switchTab(cat) {
+  state.activeTab = cat;
+  renderDrinks();
+}
+
+function changeQty(name, delta) {
+  const current = state.cart[name] || 0;
+  const next = Math.max(0, current + delta);
+  if (next === 0) delete state.cart[name];
+  else state.cart[name] = next;
+  renderDrinks();
+}
+
+function updateCartBar() {
+  const btn = document.getElementById('drinks-next-btn');
+  if (!btn) return;
+  const total = Object.values(state.cart).reduce((s, v) => s + v, 0);
+  btn.disabled = total === 0;
+}
+
+// ========== CONFIRM ==========
+function renderConfirm() {
+  renderTableBadge();
+  const summary = document.getElementById('order-summary');
+  const items = Object.entries(state.cart);
+  const total = items.reduce((s, [, q]) => s + q, 0);
+
+  const drinkMap = {};
+  drinks.forEach(d => drinkMap[d.name] = d.emoji);
+
+  summary.innerHTML = `
+    <div class="subtitle">Drinks for this table</div>
+    ${items.map(([name, qty]) => `
+      <div class="order-row">
+        <span class="emoji">${drinkMap[name] || '🍹'}</span>
+        <span class="item-name">${name}</span>
+        <span class="item-qty">×${qty}</span>
+      </div>
+    `).join('')}
+    <div class="divider"></div>
+    <div class="total">${total} item${total !== 1 ? 's' : ''}</div>
+    <button class="read-aloud" aria-label="Read order aloud" onclick="readAloud()">🔊 Read aloud</button>
+  `;
+}
+
+function readAloud() {
+  if ('speechSynthesis' in window) {
+    const items = Object.entries(state.cart).map(([n, q]) => `${q} ${n}`).join(', ');
+    const total = Object.values(state.cart).reduce((s, v) => s + v, 0);
+    const tables = state.selectedTables;
+    const tableStr = tables.map(t => `table ${t.num}, ${t.zone}`).join(' and ');
+    const msg = `Order for ${tableStr}. ${items}. ${total} item${total !== 1 ? 's' : ''} in total.`;
+    speechSynthesis.speak(new SpeechSynthesisUtterance(msg));
+  }
+}
+
+// ========== ORDER SENT ==========
+function renderSentSummary() {
+  const tables = state.selectedTables;
+  const total = Object.values(state.cart).reduce((s, v) => s + v, 0);
+  const el = document.getElementById('sent-summary');
+  const tableStr = tables.length > 0
+    ? tables.map(t => `Table ${t.num} · ${t.zone}`).join(', ')
+    : 'No table';
+  el.textContent = `${tableStr} — ${total} drink${total !== 1 ? 's' : ''}`;
+}
+
+// ========== DELIVER DRINKS ==========
+const deliveryOrders = [
+  {
+    id: 'order-3',
+    table: 3,
+    zone: 'Window',
+    emoji: '🪟',
+    items: ['🥤 Coke ×2', '🍊 Orange Juice ×1'],
+    itemsShort: '🥤 Coke ×2 · 💧 Water ×2 · 🍺 Lager',
+    price: '£14.56',
+    status: 'ready', // ready | delivered | awaiting | paid
+    bg: 'var(--navy)',
+    paidAt: null,
+  },
+  {
+    id: 'order-7',
+    table: 7,
+    zone: 'Bar Area',
+    emoji: '🍸',
+    items: ['☕ Tea ×1', '🍺 Lager ×2'],
+    itemsShort: '☕ Tea ×1 · 🍺 Lager ×2',
+    price: '£22.00',
+    status: 'preparing', // preparing
+    bg: 'var(--navy)',
+    paidAt: null,
+  },
+  {
+    id: 'order-5',
+    table: 5,
+    zone: 'Middle',
+    emoji: '🍽️',
+    items: [],
+    itemsShort: '',
+    price: '£22.00',
+    status: 'paid',
+    bg: '#D9D9D9',
+    paidAt: '12:45pm',
+  }
+];
+
+let undoTimers = {};
+
+function deliverOrder(orderId) {
+  const order = deliveryOrders.find(o => o.id === orderId);
+  if (!order || order.status !== 'ready') return;
+  order.status = 'delivered';
+  renderDeliver();
+
+  // Start undo window (8 seconds)
+  if (undoTimers[orderId]) clearTimeout(undoTimers[orderId]);
+  undoTimers[orderId] = setTimeout(() => {
+    if (order.status === 'delivered') {
+      order.status = 'awaiting';
+      renderDeliver();
+    }
+    delete undoTimers[orderId];
+  }, 8000);
+}
+
+function undoDeliver(orderId) {
+  const order = deliveryOrders.find(o => o.id === orderId);
+  if (!order || order.status !== 'delivered') return;
+  order.status = 'ready';
+  if (undoTimers[orderId]) {
+    clearTimeout(undoTimers[orderId]);
+    delete undoTimers[orderId];
+  }
+  renderDeliver();
+}
+
+function renderDeliver() {
+  const el = document.getElementById('deliver-content');
+  if (!el) return;
+
+  const readyOrders = deliveryOrders.filter(o => o.status === 'ready');
+  const deliveredOrders = deliveryOrders.filter(o => o.status === 'delivered');
+
+  // Update dynamic order count in header (exclude paid)
+  const countEl = document.getElementById('deliver-order-count');
+  if (countEl) {
+    const total = deliveryOrders.filter(o => o.status !== 'paid').length;
+    countEl.textContent = total === 1 ? '1 order' : `${total} orders`;
+  }
+  const awaitingOrders = deliveryOrders.filter(o => o.status === 'awaiting');
+  const preparingOrders = deliveryOrders.filter(o => o.status === 'preparing');
+
+  let html = '';
+
+  // Ready to deliver section
+  if (readyOrders.length > 0 || deliveredOrders.length > 0) {
+    html += `<div class="section-header" style="width:350px">
+      <span class="label">Ready to deliver</span>
+      <span class="status-badge ready">Ready now</span>
+    </div>`;
+
+    readyOrders.forEach(o => {
+      html += renderDeliverCard(o, 'ready');
+    });
+
+    deliveredOrders.forEach(o => {
+      html += renderDeliverCard(o, 'delivered');
+    });
+  }
+
+  // Awaiting payment section
+  if (awaitingOrders.length > 0) {
+    html += `<div class="section-header" style="width:350px">
+      <span class="label">Awaiting payment</span>
+      <span class="status-badge awaiting" style="min-width:auto;font-size:11px;padding:6px 14px">Awaiting payment</span>
+    </div>`;
+    awaitingOrders.forEach(o => {
+      html += `<div class="order-card" onclick="navigate('payment-queue')">
+        <div class="order-card-top">
+          <div class="table-num" style="background:${o.bg}">${o.table}</div>
+          <div class="order-details">
+            <div class="zone-name">${o.emoji} ${o.zone}</div>
+            ${o.items.map(i => `<div class="item-line">${i}</div>`).join('')}
+          </div>
+        </div>
+        <div class="order-card-badge">
+          <span class="status-badge awaiting">Awaiting Payment →</span>
+        </div>
+      </div>`;
+    });
+  }
+
+  // Divider before preparing
+  if (preparingOrders.length > 0) {
+    html += `<div class="deliver-divider"></div>`;
+    html += `<div class="section-header" style="width:350px">
+      <span class="label"></span>
+      <span class="status-badge preparing" style="min-width:auto;font-size:11px;padding:6px 14px">Preparing</span>
+    </div>`;
+
+    preparingOrders.forEach(o => {
+      html += `<div class="order-card">
+        <div class="order-card-top">
+          <div class="table-num" style="background:${o.bg}">${o.table}</div>
+          <div class="order-details">
+            <div class="zone-name">${o.emoji} ${o.zone}</div>
+            ${o.items.map(i => `<div class="item-line">${i}</div>`).join('')}
+          </div>
+        </div>
+        <div class="order-card-badge">
+          <span class="status-badge preparing">Preparing Order</span>
+        </div>
+      </div>`;
+    });
+  }
+
+  // Payment link
+  html += `<div class="payment-link-bar">
+    <button onclick="navigate('payment-queue')">💳 View Payment Queue</button>
+  </div>`;
+
+  el.innerHTML = html;
+}
+
+function renderDeliverCard(o, status) {
+  const isReady = status === 'ready';
+  const isDelivered = status === 'delivered';
+  const cardClass = isReady ? 'order-card ready-card' : 'order-card ready-card';
+
+  let badgeHtml = '';
+  let hintHtml = '';
+
+  if (isReady) {
+    badgeHtml = `<div class="order-card-badge">
+      <span class="status-badge deliver-action" onclick="event.stopPropagation(); deliverOrder('${o.id}')">Deliver Order →</span>
+    </div>`;
+  } else if (isDelivered) {
+    badgeHtml = `<div class="order-card-badge" style="flex-direction:column;align-items:center;gap:6px">
+      <span class="status-badge delivered">✓ Delivered</span>
+      <button class="undo-link" onclick="event.stopPropagation(); undoDeliver('${o.id}')">Undo delivery <span class="undo-timer">(tap to reverse)</span></button>
+    </div>`;
+    hintHtml = `<div class="hint-amber-bar" style="margin-top:-4px">Moving to "Awaiting payment" shortly...</div>`;
+  }
+
+  return `<div class="${cardClass}">
+    <div class="order-card-top">
+      <div class="table-num" style="background:${o.bg}">${o.table}</div>
+      <div class="order-details">
+        <div class="zone-name">${o.emoji} ${o.zone}</div>
+        ${o.items.map(i => `<div class="item-line">${i}</div>`).join('')}
+      </div>
+    </div>
+    ${badgeHtml}
+  </div>${hintHtml}`;
+}
+
+// ========== PAYMENT HELP ==========
+function openPaymentHelp(tableNum, zone, emoji) {
+  state.paymentHelpTable = tableNum;
+  const badge = document.getElementById('payment-help-badge');
+  if (badge) badge.innerHTML = `<div class="table-badge">${emoji} Table ${tableNum} · ${zone}</div>`;
+  navigate('payment-help');
+}
+
+function markPaid() {
+  const order = deliveryOrders.find(o => o.table === state.paymentHelpTable && o.status === 'awaiting');
+  if (order) {
+    const now = new Date();
+    const hours = now.getHours();
+    const mins = now.getMinutes().toString().padStart(2, '0');
+    const ampm = hours >= 12 ? 'pm' : 'am';
+    const h = hours % 12 || 12;
+    order.status = 'paid';
+    order.paidAt = `${h}:${mins}${ampm}`;
+    order.bg = '#D9D9D9';
+  }
+  updateDeliverBadge();
+  goBack(); // back to payment queue which will re-render
+}
+
+function renderPaymentQueue() {
+  const el = document.getElementById('payment-queue-content');
+  if (!el) return;
+
+  const awaitingOrders = deliveryOrders.filter(o => o.status === 'awaiting');
+  const paidOrders = deliveryOrders.filter(o => o.status === 'paid');
+
+  let html = '';
+
+  // Heading
+  html += `<span class="screen-heading" style="display:block;margin:0">Who needs payment help?</span>`;
+
+  if (awaitingOrders.length > 0) {
+    html += `<div style="display:flex;justify-content:flex-end;margin:0 0 6px">
+      <span class="status-badge awaiting" style="font-size:11px;font-weight:500;padding:6px 16px;min-width:auto">Awaiting payment</span>
+    </div>`;
+    html += `<div style="display:flex;flex-direction:column;gap:16px">`;
+    awaitingOrders.forEach(o => {
+      html += `<div class="order-card" style="border:1px solid #DEDEDE" role="button" tabindex="0" aria-label="Table ${o.table}, ${o.zone}, Price ${o.price}" onclick="openPaymentHelp(${o.table},'${o.zone}','${o.emoji}')" onkeydown="if(event.key==='Enter')this.click()">
+        <div class="order-card-top">
+          <div class="table-num" style="background:var(--navy)">${o.table}</div>
+          <div class="order-details">
+            <div class="zone-name">${o.emoji} ${o.zone}</div>
+            <div class="item-line">${o.itemsShort}</div>
+            <div class="price">Price ${o.price}</div>
+          </div>
+          <span class="chevron" aria-hidden="true">›</span>
+        </div>
+      </div>`;
+    });
+    html += `</div>`;
+  } else {
+    html += `<div style="text-align:center;padding:24px 0;color:var(--text-grey);font-size:14px;">No tables awaiting payment</div>`;
+  }
+
+  // Divider + Completed
+  if (paidOrders.length > 0) {
+    html += `<div style="height:1px;background:#D9D9D9;margin:32px 0 20px"></div>`;
+    html += `<span style="font-size:13px;font-weight:400;color:var(--text-grey);display:block;margin-bottom:14px">Completed today</span>`;
+    paidOrders.forEach(o => {
+      html += `<div class="order-card" style="background:transparent;border:1px solid #DEDEDE;margin-bottom:12px">
+        <div class="order-card-top">
+          <div class="table-num" style="background:#D9D9D9;color:var(--text-grey)">${o.table}</div>
+          <div class="order-details">
+            <div class="zone-name" style="font-weight:500">${o.emoji} ${o.zone}</div>
+            <div class="zone-name" style="font-weight:500">✅ Paid</div>
+            <div class="price">Price ${o.price} | ${o.paidAt}</div>
+          </div>
+        </div>
+      </div>`;
+    });
+  }
+
+  el.innerHTML = html;
+}
+
+// ========== INIT ==========
+document.addEventListener('DOMContentLoaded', () => {
+  renderTableBadge();
+  renderDeliver();
+  renderPaymentQueue();
+  updateDeliverBadge();
+});
+</script>
+</body>
+</html>
