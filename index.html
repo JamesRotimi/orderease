@@ -726,6 +726,34 @@ body {
   font-weight: 400;
 }
 
+/* Countdown progress bar for undo window */
+.undo-progress-wrap {
+  width: 100%;
+  max-width: 280px;
+  height: 4px;
+  background: #E8E4DF;
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 2px;
+}
+.undo-progress-bar {
+  height: 100%;
+  background: var(--amber);
+  border-radius: 2px;
+  animation: undoCountdown 8s linear forwards;
+}
+@keyframes undoCountdown {
+  from { width: 100%; }
+  to { width: 0%; }
+}
+.undo-countdown-text {
+  font-size: 10px;
+  color: var(--text-grey);
+  font-weight: 400;
+  margin-top: 2px;
+  text-align: center;
+}
+
 .payment-link-bar {
   width: 350px;
   display: flex;
@@ -1531,8 +1559,28 @@ function deliverOrder(orderId) {
   order.status = 'delivered';
   renderDeliver();
 
-  // Start undo window (8 seconds)
+  // Start undo window (8 seconds) with countdown
   if (undoTimers[orderId]) clearTimeout(undoTimers[orderId]);
+  if (window._countdownIntervals && window._countdownIntervals[orderId]) {
+    clearInterval(window._countdownIntervals[orderId]);
+  }
+  if (!window._countdownIntervals) window._countdownIntervals = {};
+
+  let remaining = 8;
+  window._countdownIntervals[orderId] = setInterval(() => {
+    remaining--;
+    const el = document.getElementById(`countdown-${orderId}`);
+    if (el && remaining > 0) {
+      el.textContent = `Moving to awaiting payment in ${remaining}s`;
+    } else if (el && remaining <= 0) {
+      el.textContent = '';
+    }
+    if (remaining <= 0) {
+      clearInterval(window._countdownIntervals[orderId]);
+      delete window._countdownIntervals[orderId];
+    }
+  }, 1000);
+
   undoTimers[orderId] = setTimeout(() => {
     if (order.status === 'delivered') {
       order.status = 'awaiting';
@@ -1549,6 +1597,10 @@ function undoDeliver(orderId) {
   if (undoTimers[orderId]) {
     clearTimeout(undoTimers[orderId]);
     delete undoTimers[orderId];
+  }
+  if (window._countdownIntervals && window._countdownIntervals[orderId]) {
+    clearInterval(window._countdownIntervals[orderId]);
+    delete window._countdownIntervals[orderId];
   }
   renderDeliver();
 }
@@ -1656,9 +1708,11 @@ function renderDeliverCard(o, status) {
   } else if (isDelivered) {
     badgeHtml = `<div class="order-card-badge" style="flex-direction:column;align-items:center;gap:6px">
       <span class="status-badge delivered">✓ Delivered</span>
-      <button class="undo-link" onclick="event.stopPropagation(); undoDeliver('${o.id}')">Undo delivery <span class="undo-timer">(tap to reverse)</span></button>
+      <div class="undo-progress-wrap"><div class="undo-progress-bar" id="progress-${o.id}"></div></div>
+      <div class="undo-countdown-text" id="countdown-${o.id}">Moving to awaiting payment in 8s</div>
+      <button class="undo-link" onclick="event.stopPropagation(); undoDeliver('${o.id}')">Undo delivery</button>
     </div>`;
-    hintHtml = `<div class="hint-amber-bar" style="margin-top:-4px">Moving to "Awaiting payment" shortly...</div>`;
+    hintHtml = '';
   }
 
   return `<div class="${cardClass}">
