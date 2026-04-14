@@ -1750,6 +1750,17 @@ function renderPaymentQueue() {
     });
   }
 
+  // Back to Home button
+  html += `<div style="padding-top:32px;display:flex;justify-content:center">
+    <button onclick="resetAndGoHome()" aria-label="Back to home" style="
+      width:100%;max-width:320px;padding:16px 24px;
+      background:var(--navy);color:white;
+      font-family:var(--font);font-size:16px;font-weight:600;
+      border:none;border-radius:14px;cursor:pointer;
+      min-height:44px;
+    ">Back to Home</button>
+  </div>`;
+
   el.innerHTML = html;
 }
 
