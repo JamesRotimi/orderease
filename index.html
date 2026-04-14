@@ -1253,6 +1253,7 @@ function navigate(screenId, skipHistory = false) {
   if (screenId === 'confirm') renderConfirm();
   if (screenId === 'order-sent') {
     state.confirmedOrders++;
+    addOrderToDelivery();
     updateDeliverBadge();
     renderSentSummary();
   }
@@ -1501,6 +1502,39 @@ function readAloud() {
 }
 
 // ========== ORDER SENT ==========
+function addOrderToDelivery() {
+  const tables = state.selectedTables;
+  if (tables.length === 0) return;
+
+  const drinkMap = {};
+  drinks.forEach(d => drinkMap[d.name] = d.emoji);
+
+  const cartItems = Object.entries(state.cart);
+  const itemLines = cartItems.map(([name, qty]) => `${drinkMap[name] || '🍹'} ${name} ×${qty}`);
+  const itemsShort = cartItems.map(([name, qty]) => `${drinkMap[name] || '🍹'} ${name} ×${qty}`).join(' · ');
+  const totalPrice = (cartItems.reduce((s, [, q]) => s + q, 0) * 3.50).toFixed(2);
+
+  tables.forEach(t => {
+    // Check if an order for this table already exists and is active
+    const existing = deliveryOrders.find(o => o.table === t.num && (o.status === 'ready' || o.status === 'delivered' || o.status === 'awaiting'));
+    if (existing) return; // Don't duplicate
+
+    const orderId = `order-new-${t.num}-${Date.now()}`;
+    deliveryOrders.push({
+      id: orderId,
+      table: t.num,
+      zone: t.zone,
+      emoji: t.emoji,
+      items: itemLines,
+      itemsShort: itemsShort,
+      price: `£${totalPrice}`,
+      status: 'ready',
+      bg: 'var(--navy)',
+      paidAt: null,
+    });
+  });
+}
+
 function renderSentSummary() {
   const tables = state.selectedTables;
   const total = Object.values(state.cart).reduce((s, v) => s + v, 0);
